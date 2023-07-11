@@ -192,7 +192,8 @@ class PdfQA:
 
             ## 3. Create Embeddings and add to chroma store
             ##TODO: Validate if self.embedding is not None
-            persist_directory= self.config.get("persist_directory","/Users/karmukilan/examples/LLMs/QA_app/storage")
+            persist_directory= self.config.get("persist_directory","/Users/karmukilan/examples/LLMs/QA_app/storage/")
+            print(persist_directory)
             self.vectordb = Chroma.from_documents(documents=texts, embedding=self.embedding, persist_directory=persist_directory)
             self.vector.persist()
             vectordb_fromPersist=Chroma(persist_directory=persist_directory, embedding_function=self.embedding)
