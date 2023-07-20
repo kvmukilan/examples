@@ -59,26 +59,24 @@ with st.sidebar:
     emb = st.radio("**Select Embedding Model**", [EMB_INSTRUCTOR_XL, EMB_SBERT_MPNET_BASE,EMB_SBERT_MINILM],index=1)
     llm = st.radio("**Select LLM Model**", [LLM_FASTCHAT_T5_XL, LLM_FLAN_T5_SMALL,LLM_FLAN_T5_BASE,LLM_FLAN_T5_LARGE,LLM_FLAN_T5_XL,LLM_FALCON_SMALL],index=2)
     load_in_8bit = st.radio("**Load 8 bit**", [True, False],index=1)
-    pdf_file = st.file_uploader("**Upload PDF**", type="pdf")
-
     
     if st.button("Submit") and pdf_file is not None:
         with st.spinner(text="Uploading PDF and Generating Embeddings.."):
-            with NamedTemporaryFile(delete=False, suffix='.pdf') as tmp:
-                shutil.copyfileobj(pdf_file, tmp)
-                tmp_path = Path(tmp.name)
-                st.session_state["pdf_qa_model"].config = {
-                    "pdf_path": str(tmp_path),
-                    "embedding": emb,
-                    "llm": llm,
-                    "load_in_8bit": load_in_8bit
-                }
-                st.session_state["pdf_qa_model"].embedding = load_emb(emb)
-                st.session_state["pdf_qa_model"].llm = load_llm(llm,load_in_8bit)        
-                st.session_state["pdf_qa_model"].init_embeddings()
-                st.session_state["pdf_qa_model"].init_models()
-                st.session_state["pdf_qa_model"].vector_db_pdf()
-                st.sidebar.success("PDF uploaded successfully")
+            
+            shutil.copyfileobj(pdf_file, tmp)
+            tmp_path = Path(tmp.name)
+            st.session_state["pdf_qa_model"].config = {
+                "pdf_path": str(tmp_path),
+                "embedding": emb,
+                "llm": llm,
+                "load_in_8bit": load_in_8bit
+            }
+            st.session_state["pdf_qa_model"].embedding = load_emb(emb)
+            st.session_state["pdf_qa_model"].llm = load_llm(llm,load_in_8bit)        
+            st.session_state["pdf_qa_model"].init_embeddings()
+            st.session_state["pdf_qa_model"].init_models()
+            st.session_state["pdf_qa_model"].vector_db_pdf()
+            st.sidebar.success("PDF uploaded successfully")
 
 question = st.text_input('Ask a question', 'What is this document?')
 

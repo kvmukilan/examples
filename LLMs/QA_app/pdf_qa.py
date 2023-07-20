@@ -23,6 +23,7 @@ class PdfQA:
         self.llm = None
         self.qa = None
         self.retriever = None
+        self.vectordb_fromPersist = None
 
     # The following class methods are useful to create global GPU model instances
     # This way we don't need to reload models in an interactive app,
@@ -169,43 +170,23 @@ class PdfQA:
                 self.llm = PdfQA.create_falcon_instruct_small(load_in_8bit=load_in_8bit)
         
         else:
-            raise ValueError("Invalid config")        
-    def vector_db_pdf(self) -> None:
-        """
-        creates vector db for the embeddings and persists them or loads a vector db from the persist directory
-        """
-        pdf_path = self.config.get("pdf_path",None)
-        persist_directory = self.config.get("persist_directory",None)
-        if persist_directory and os.path.exists(persist_directory):
-            ## Load from the persist db
-            self.vectordb = Chroma(persist_directory=persist_directory, embedding_function=self.embedding)
-        elif pdf_path and os.path.exists(pdf_path):
-            ## 1. Extract the documents
-            loader = PDFPlumberLoader(pdf_path)
-            documents = loader.load()
-            ## 2. Split the texts
-            text_splitter = CharacterTextSplitter(chunk_size=100, chunk_overlap=0)
-            texts = text_splitter.split_documents(documents)
-            # text_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10, encoding_name="cl100k_base")  # This the encoding for text-embedding-ada-002
-            text_splitter = TokenTextSplitter(chunk_size=100, chunk_overlap=10)  # This the encoding for text-embedding-ada-002
-            texts = text_splitter.split_documents(texts)
+            raise ValueError("Invalid config")  
 
-            ## 3. Create Embeddings and add to chroma store
-            ##TODO: Validate if self.embedding is not None
-            persist_directory= self.config.get("persist_directory","/Users/karmukilan/examples/LLMs/QA_app/storage/")
-            print(persist_directory)
-            self.vectordb = Chroma.from_documents(documents=texts, embedding=self.embedding, persist_directory=persist_directory)
-            self.vector.persist()
-            vectordb_fromPersist=Chroma(persist_directory=persist_directory, embedding_function=self.embedding)
-        else:
-            raise ValueError("NO PDF found")
-
+    def get_conversation_chain(self) -> None:
+        hf_llm = HuggingFacePipeline(pipeline=self.llm, model_id=self.config["llm"])
+        self.retriever = self.vectordb.as_retriever(search_kwargs={"k": 3})
+        memory = ConversationBufferMemory(memory_key='chat_history', return_messages=True)
+        self.conversation = ConversationalRetrievalChain.from_llm(llm=hf_llm, retriever=self.retriever, memory=memory)
+        return self.conversation
+      
+    
+    
     def retreival_qa_chain(self):
         """
         Creates retrieval qa chain using vectordb as retrivar and LLM to complete the prompt
         """
         ##TODO: Use custom prompt
-        self.retriever = self.vectordb_frompersist.as_retriever(search_kwargs={"k":3})
+        self.retriever = self.vectordb.as_retriever(search_kwargs={"k":3})
         
         if self.config["llm"] == LLM_OPENAI_GPT35:
           # Use ChatGPT API
@@ -243,4 +224,4 @@ class PdfQA:
         answer = re.sub(r"<pad>\s+", "", answer)
         answer = re.sub(r"  ", " ", answer)
         answer = re.sub(r"\n$", "", answer)
-        return answer
+        return answer 
